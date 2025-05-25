@@ -1,0 +1,185 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <title>Nouvil</title>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
+    <!-- jQuery UI CSS -->
+    <link rel="stylesheet" href="{% static 'plugins/jquery_datepacker/jquery_ui.css' %}">
+    <!-- IonIcons -->
+    <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="{% static 'dist/css/adminlte_ar.min.css' %}">
+    <!-- Google Font: Source Sans Pro -->
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet">
+</head>
+
+<body dir="rtl" class="hold-transition sidebar-mini">
+    <div class="wrapper">
+        {% include 'parts/nav.html' %}
+        {% include 'parts/sidebar.html' %}
+
+        {% block content %}
+        {% endblock %}
+
+        {% include 'parts/footer.html' %}
+    </div>
+    <!-- ./wrapper -->
+
+    <!-- REQUIRED SCRIPTS -->
+    <!-- jQuery -->  
+    <script src="{% static 'plugins/jquery_datepacker/jquery_ui.js' %}"></script>
+    <!-- Bootstrap 4 -->
+    <script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    <!-- AdminLTE App -->
+    <script src="{% static 'dist/js/adminlte.js' %}"></script>
+    <!-- ChartJS -->
+    <script src="{% static 'plugins/chart.js/Chart.min.js' %}"></script>
+    <!-- Demo JS -->
+    <script src="{% static 'dist/js/demo.js' %}"></script>
+    
+  
+
+
+    <script>
+    $(document).ready(function() {
+        {% for book in books %}
+
+        $(".cat{{book.categories.id}}").click(function(){
+            $(".bookhide").hide();
+            $(".book{{book.categories.id}}").show();
+        });
+        $(".status{{book.status}}").click(function(){
+            $(".bookhide").hide();
+            $(".book{{book.status}}").show();
+
+        });
+        {% endfor %}
+        // إدارة عرض/إخفاء نموذج الفئة
+        $("#catinput").hide();
+        $("#addcat").click(function(){
+          $("#catinput").show();
+        });
+        $("#backcat").click(function(){
+          $("#catinput").hide();
+        });
+
+        // إدارة المودال
+        $('#myModal').on('shown.bs.modal', function() {
+            $('#myInput').trigger('focus');
+        });
+
+        $("#retaldays").keyup(function(){
+            var days = parseInt($("#retaldays").val()) || 0;
+            var price = parseFloat($("#retalprice").val()) || 0;
+            $("#totalretal").val(days * price);
+        });
+        
+
+        // الرسوم البيانية
+        var ticksStyle = {
+            fontColor: '#495057',
+            fontStyle: 'bold'
+        };
+
+        var mode = 'index';
+        var intersect = true;
+
+        // مخطط المبيعات
+        var $salesChart = $('#sales-chart');
+        if ($salesChart.length) {
+            var salesChart = new Chart($salesChart, {
+                type: 'bar',
+                data: {
+                    labels: ['تفاصيل الارباح'],
+                    datasets: [
+                        {
+                            backgroundColor: '#007bff',
+                            borderColor: '#007bff',
+                            data: ['50']
+                        },
+                        {
+                            backgroundColor: '#ced4da',
+                            borderColor: '#ced4da',
+                            data: ['30']
+                        }
+                    ]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    tooltips: { mode: mode, intersect: intersect },
+                    hover: { mode: mode, intersect: intersect },
+                    legend: { display: false },
+                    scales: {
+                        yAxes: [{
+                            gridLines: {
+                                display: true,
+                                lineWidth: '4px',
+                                color: 'rgba(0, 0, 0, .2)',
+                                zeroLineColor: 'transparent'
+                            },
+                            ticks: $.extend({
+                                beginAtZero: true,
+                                callback: function(value) {
+                                    if (value >= 1000) {
+                                        value /= 1000;
+                                        value += 'k';
+                                    }
+                                    return '$' + value;
+                                }
+                            }, ticksStyle)
+                        }],
+                        xAxes: [{
+                            display: true,
+                            gridLines: { display: false },
+                            ticks: ticksStyle
+                        }]
+                    }
+                }
+            });
+        }
+
+        // مخطط الدائري
+        var $visitorsChart = $('#visitors-chart');
+        if ($visitorsChart.length) {
+            var pieChart = $visitorsChart.get(0).getContext('2d');
+            var myPieChart = new Chart(pieChart, {
+                type: 'pie',
+                data: {
+                    datasets: [{
+                        data: ['{{allavailbe}}', '{{allsold}}', '{{allrental}}'],
+                        backgroundColor: ["#27c100", "#f3545d", "#fdaf4b"],
+                        borderWidth: 10
+                    }],
+                    labels: ['Available', 'Sold', 'Rented']
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            fontColor: '#000',
+                            fontSize: 15,
+                            usePointStyle: true,
+                            padding: 30
+                        }
+                    },
+                    pieceLabel: {
+                        render: 'percentage',
+                        fontColor: 'white',
+                        fontSize: 14
+                    }
+                }
+            });
+        }ٍ
+    });
+    </script>
+</body>
+</html>
