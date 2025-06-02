@@ -28,6 +28,7 @@ class BookForm(forms.ModelForm):
             'total_retal',
             'status',
             'category',
+            'active',
             
             ]
         

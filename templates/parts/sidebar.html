@@ -1,97 +1,111 @@
- <!-- في المكان ده هحط سلايد بار -->
+<!-- Sidebar -->
+<aside class="main-sidebar sidebar-dark-primary elevation-4" style="position: fixed;">
+  <!-- Logo -->
+  <a href="{% url 'index' %}" class="brand-link">
+    <span class="brand-text font-weight-light">NOUVIL</span>
+  </a>
 
-  <!-- Main Sidebar Container -->
-  <aside style="position: fixed;" class="main-sidebar sidebar-dark-primary elevation-4">
-    <!-- Brand Logo -->
-    <a href="{% url 'index' %}" class="brand-link">
-      <span class="brand-text font-weight-light">NOUVIL</span>
-    </a>
-
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <!-- Sidebar user panel (optional) -->
-      <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-        <div class="image">
-        </div>
-        <div class="info">
-          <a href="{% url 'index' %}" class="d-block">Gihad Yassen Al-shebani</a>
-        </div>
+  <!-- Sidebar content -->
+  <div class="sidebar">
+    <!-- User panel -->
+    <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+      <div class="info">
+        <a href="{% url 'index' %}" class="d-block">Gihad Yassen Al-shebani</a>
       </div>
-
-      <!-- Sidebar Menu -->
-      <nav class="mt-2">
-        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-
-          <li class="nav-item">
-            <a href="{% url 'books' %}" class="nav-link">
-              <i class="nav-icon fas fa-th"></i>
-              <p>
-                New Books
-              </p>
-            </a>
-          </li>
-          <li class="nav-item has-treeview">
-            <a href="#" class="nav-link">
-              <i class="nav-icon fas fa-copy"></i>
-              <p>
-                Category
-                <i class="fas fa-angle-left right"></i>
-                
-              </p>
-            </a>
-            <ul class="nav nav-treeview">
-              
-                  <li class="nav-item">
-                    <a id="addcat" href="#" class="nav-link">
-                        <i class="fa fa-plus "></i>
-                        <p  class="text-light"> Add New </p>
-                    </a>
-                  </li> 
-              <form id="cat" method="POST">
-                {% csrf_token %}
-                <div id='catinput'>
-                  {{formcat}}
-            
-                  <button type="submit" class="btn btn-success">save</button>
-                  <button id="backcat" class="btn btn-primary ">back</button>
-               </div>
-              </form>  
-            {% for cat in categories %}
-                  <li style="cursor: pointer;" class="nav-item cat{{cat.id}}">
-                    <a id="" class="nav-link">
-                      <i class="far fa-circle nav-icon"></i>
-                      <p>{{cat.name}}</p>
-                    </a>
-                  </li>
-             {% endfor %}
- 
-
-            </ul>
-          </li>
-
-          <li class="nav-header">الكتب المستعارة</li>
-          
-          <li style="cursor: pointer;" class="nav-item statussold">
-            <a id="" class="nav-link">
-              <i class="nav-icon far fa-circle text-danger"></i>
-              <p class="text">تم بيعه</p>
-            </a>
-          </li>
-          <li style="cursor: pointer;" class="nav-item statusrental">
-            <a id="" class="nav-link">
-              <i class="nav-icon far fa-circle text-warning"></i>
-              <p>تم استعارته</p>
-            </a>
-          </li>
-          <li style="cursor: pointer;" class="nav-item statusavailble">
-            <a id="" class="nav-link">
-              <i class="nav-icon far fa-circle text-info"></i>
-              <p>متاح</p>
-            </a>
-          </li>
-        </ul>
-      </nav>
-      <!-- /.sidebar-menu -->
     </div>
-    <!-- /.sidebar -->
-  </aside>
+
+    <!-- Menu -->
+    <nav class="mt-2">
+      <ul class="nav nav-pills nav-sidebar flex-column" role="menu">
+        <!-- Books -->
+        <li class="nav-item">
+          <a href="{% url 'books' %}" class="nav-link">
+            <i class="nav-icon fas fa-th"></i>
+            <p>New Books</p>
+          </a>
+        </li>
+
+        <!-- Category -->
+        <li class="nav-item has-treeview">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-copy"></i>
+            <p>Category <i class="fas fa-angle-left right"></i></p>
+          </a>
+          <ul class="nav nav-treeview" style="display: none;">
+            <li class="nav-item">
+              <a id="addcat" href="#" class="nav-link">
+                <i class="fa fa-plus nav-icon"></i>
+                <p>Add New</p>
+              </a>
+            </li>
+            <form id="cat" method="POST">
+              {% csrf_token %}
+              <div id='catinput'>
+                {{ formcat }}
+                <button type="submit" class="btn btn-success">Save</button>
+                <button id="backcat" class="btn btn-primary">Back</button>
+              </div>
+            </form>
+            {% for cat in categories %}
+              <li class="nav-item cat{{ cat.id }}">
+                <a href="#" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>{{ cat.name }}</p>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </li>
+
+        <!-- Borrowed Books -->
+        <li class="nav-item has-treeview">
+          <a href="#" class="nav-link">
+            <i class="nav-icon fas fa-book"></i>
+            <p>الكتب المستعارة <i class="fas fa-angle-left right"></i></p>
+          </a>
+          <ul class="nav nav-treeview" style="display: none;">
+            <li class="nav-item statussold">
+              <a href="#" class="nav-link">
+                <i class="nav-icon far fa-circle text-danger"></i>
+                <p>تم بيعه</p>
+              </a>
+            </li>
+            <li class="nav-item statusrental">
+              <a href="#" class="nav-link">
+                <i class="nav-icon far fa-circle text-warning"></i>
+                <p>تم استعارته</p>
+              </a>
+            </li>
+            <li class="nav-item statusavailble">
+              <a href="#" class="nav-link">
+                <i class="nav-icon far fa-circle text-info"></i>
+                <p>متاح</p>
+              </a>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </nav>
+  </div>
+</aside>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $(document).ready(function () {
+    $('.has-treeview > a').click(function (e) {
+      e.preventDefault();
+      let $parent = $(this).closest('.has-treeview');
+      let $submenu = $parent.find('.nav-treeview').first();
+
+      if ($parent.hasClass('menu-open')) {
+        $submenu.slideUp();
+        $parent.removeClass('menu-open');
+      } else {
+        $('.has-treeview.menu-open').removeClass('menu-open').find('.nav-treeview').slideUp();
+        $submenu.slideDown();
+        $parent.addClass('menu-open');
+      }
+    });
+  });
+</script>

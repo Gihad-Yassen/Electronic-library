@@ -1,26 +1,25 @@
-from django.shortcuts import render , redirect , get_object_or_404
-from .models import * 
-from .forms import BookForm ,CategoryForm
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q, Count
+from lms_app.serializers import BookSerializer
+from .models import *
+from .forms import BookForm, CategoryForm
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Book
-from .serializers import BookSerializer
-from django.db.models import Count
-
-
+from django.http import JsonResponse
 
 def index(request):
     if request.method == 'POST':
         add_book = BookForm(request.POST, request.FILES)
-        if add_book.is_valid(): 
+        if add_book.is_valid():
             add_book.save()
 
         add_category = CategoryForm(request.POST)
         if add_category.is_valid():
             add_category.save()
+    
     context = {
-        'categories' : Category.objects.all(),
+        'categories': Category.objects.all(),
         'books': Book.objects.all(),
         'form': BookForm(),
         'formcat': CategoryForm(),
@@ -28,19 +27,27 @@ def index(request):
         'allsold': Book.objects.filter(status='sold').count(),
         'allrental': Book.objects.filter(status='rental').count(),
         'allavailbe': Book.objects.filter(status='availble').count(),
-
     }
-    return render(request,'pages/index.html' , context)
-
+    return render(request, 'pages/index.html', context)
 
 def books(request):
-    context = {
-        'categories' : Category.objects.all(),
-        'books': Book.objects.all(),
-        'formcat': CategoryForm(),
+    query = request.GET.get('q')
+    if query:
+        books = Book.objects.filter(
+            Q(title__icontains=query) |
+            Q(author__icontains=query) |
+            Q(course__name__icontains=query)
+        )
+    else:
+        books = Book.objects.all()
 
-}
-    return render(request,'pages/books.html', context)
+    context = {
+        'categories': Category.objects.all(),
+        'courses': Course.objects.all(),
+        'books': books,
+        'formcat': CategoryForm(),
+    }
+    return render(request, 'pages/books.html', context)
 
 def update(request, id):
     book_id = Book.objects.get(id=id)
@@ -50,13 +57,12 @@ def update(request, id):
             book_save.save()
             return redirect('/')
     else:
-        book_save =  BookForm(instance=book_id)
+        book_save = BookForm(instance=book_id)
+    
     context = {
-        'form':book_save,
+        'form': book_save,
     }
-    return render(request, 'pages/update.html',context)
-
-
+    return render(request, 'pages/update.html', context)
 
 def delete(request, id):
     book_delete = get_object_or_404(Book, id=id)
@@ -64,7 +70,6 @@ def delete(request, id):
         book_delete.delete()
         return redirect('/')
     return render(request, 'pages/delete.html')
-
 
 class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()
@@ -78,3 +83,10 @@ class BookViewSet(viewsets.ModelViewSet):
             'total_books': total_books,
             'books_by_category': list(by_category),
         })
+        
+
+def course_autocomplete(request):
+    term = request.GET.get('term', '')
+    courses = Course.objects.filter(name__icontains=term).values_list('name', flat=True)[:10]
+    results = list(courses)
+    return JsonResponse(results, safe=False)
