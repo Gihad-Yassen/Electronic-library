@@ -24,8 +24,6 @@ class Book(models.Model):
         ('rental', 'rental'),
         ('sold', 'sold'),
     }
-    
-
     course = models.ForeignKey(Course, on_delete=models.PROTECT, null=True, blank=True)
     title = models.CharField(max_length=250)
     author = models.CharField(max_length=250, null=True, blank=True)
