@@ -1,5 +1,6 @@
 from django.contrib import admin
-from django import forms
+from django import forms 
+from django.forms import TextInput, Textarea    
 from django.db import models
 from tinymce.widgets import TinyMCE
 from .models import Book, Category, Course
@@ -15,6 +16,12 @@ class BookForm(forms.ModelForm):
     )
 
     active = forms.ChoiceField(choices=ACTIVE_CHOICES, label='ACTIVE')
+    
+    active = forms.ChoiceField(
+        choices=ACTIVE_CHOICES,
+        widget=forms.RadioSelect, 
+        label='الحالة'
+    )
 
     class Meta:
         model = Book
@@ -65,8 +72,20 @@ class CourseAdmin(admin.ModelAdmin):
 
 # لوحة تحكم الكتب
 class BookAdmin(admin.ModelAdmin):
+    
+    formfield_overrides = {
+        models.CharField: {
+            'widget': TextInput(attrs={'size': 60})     
+        },
+      
+    }
     form = BookForm
     list_display = ['title', 'author', 'category', 'status', 'course', 'is_active_display']
+    search_help_text = "ابحث بالعنوان أو اسم المؤلف أو اسم الدورة"
+    list_display_links = ['title', 'author'] 
+    list_max_show_all = 100
+    list_per_page = 2
+    list_select_related = ['category', 'course',]
     search_fields = ['title', 'author', 'course__name']
     autocomplete_fields = ['course', 'category']
     list_filter = ['category', 'status', 'course', 'active']
@@ -75,6 +94,14 @@ class BookAdmin(admin.ModelAdmin):
     actions_on_top = True     
     actions_on_bottom = True 
     filter_horizontal =()
+    ordering = ['-active', 'category', '-id']   
+    readonly_fields = ['category']
+    save_as = True
+    save_as_continue = True
+    save_on_top = True 
+    show_full_result_count = True
+    
+    
 
     @admin.display(ordering='active', description='الحالة', boolean=True)
     def is_active_display(self, obj):

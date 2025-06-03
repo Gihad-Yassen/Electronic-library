@@ -1,17 +1,13 @@
 from django.db import models
 from taggit.managers import TaggableManager
 
+
 class Category(models.Model):
     name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.name
 
-class Tag(models.Model):
-    name = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.name
 
 class Course(models.Model):
     name = models.CharField(max_length=100)
@@ -44,7 +40,8 @@ class Book(models.Model):
     status = models.CharField(max_length=50, choices=status_book, null=True, blank=True)
     category = models.ForeignKey(Category, on_delete=models.PROTECT, null=True, blank=True)
     active = models.BooleanField(default=False)
-    tags = models.ManyToManyField(Tag, blank=True) 
     tags = TaggableManager()
+    
+    
     def __str__(self):
         return self.title
