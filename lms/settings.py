@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'tinymce',
     'smart_selects',
+    'taggit',
+    
 
 
 ]

@@ -5,6 +5,8 @@ from tinymce.widgets import TinyMCE
 from .models import Book, Category, Course
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
+from taggit.models import Tag
+
 
 class BookForm(forms.ModelForm):
     ACTIVE_CHOICES = (
@@ -55,8 +57,6 @@ class CourseAdmin(admin.ModelAdmin):
     def renderd_description(self,obj):
         return format_html(obj.description)
         
-    
-    
     def get_formsets_with_inlines(self, request, obj=None):
         for inline in self.get_inline_instances(request, obj):
             # لا تعرض BookInline في صفحة الإضافة
@@ -65,35 +65,52 @@ class CourseAdmin(admin.ModelAdmin):
 
 # لوحة تحكم الكتب
 class BookAdmin(admin.ModelAdmin):
-    def activate_books(modeladmin, request, queryset):
+    form = BookForm
+    list_display = ['title', 'author', 'category', 'status', 'course', 'is_active_display']
+    search_fields = ['title', 'author', 'course__name']
+    autocomplete_fields = ['course', 'category']
+    list_filter = ['category', 'status', 'course', 'active']
+    empty_value_display = ' لا توجد قيمة '
+    actions = ['activate_books', 'deactivate_books']
+    actions_on_top = True     
+    actions_on_bottom = True 
+    filter_horizontal =()
+
+    @admin.display(ordering='active', description='الحالة', boolean=True)
+    def is_active_display(self, obj):
+        return obj.active
+
+    def get_sortable_by(self, request):
+        return {*self.get_list_display(request)} - {'status'}
+
+    def activate_books(self, request, queryset):
         updated = queryset.update(active=True)
-        modeladmin.message_user(request, f"تم تفعيل {updated} كتاب بنجاح.")
-    @admin.action(description="deactivate books")
+        self.message_user(request, f"تم تفعيل {updated} كتاب بنجاح.")
+
+    @admin.action(description="  deactivate books")
     def deactivate_books(self, request, queryset):
         updated = queryset.update(active=False)
         self.message_user(request, f"{updated} كتاب تم إلغاء تفعيله.")
-        
-    form = BookForm  # استخدام النموذج المخصص
-    list_display = ['title', 'author', 'category', 'status', 'course', 'is_active_display']
-    search_fields = ['title', 'author', 'course__name']
-    autocomplete_fields = ['course', 'category'] 
-    list_filter = ['category', 'status', 'course', 'active']
-    actions = ['activate_books','deactivate_books'] 
-    
 
 
-    def get_sortable_by(self, request):
-        # جميع الأعمدة قابلة للترتيب ما عدا 'status'
-        return {*self.get_list_display(request)} - {'status'}
-    
-    def is_active_display(self, obj):
-        if obj.active:
-            return format_html('<span style="color: green;">✅ مفعل</span>')
-        return format_html('<span style="color: red;">❌ غير مفعل</span>')
-    
-    is_active_display.short_description = 'active'
-    is_active_display.admin_order_field = 'active'
-    
+    fieldsets = (
+        ('معلومات الكتاب', {
+            'fields': ('title', 'author', 'category', 'tags'),
+            'description': 'معلومات أساسية عن الكتاب.',
+            'classes': ('wide',),
+        }),
+        ('معلومات النشر والدورة', {
+            'fields': ('status', 'course', 'price'),
+            'description': 'تفاصيل حول الدورة المرتبطة وسعر الكتاب.',
+            'classes': ('collapse',),
+        }),
+        ('الحالة', {
+            'fields': ('active',),
+            'description': 'هل الكتاب مفعل أم لا؟',
+        }),
+    )
+
+           
 
 
 # لوحة تحكم الفئات
@@ -105,3 +122,6 @@ class CategoryAdmin(admin.ModelAdmin):
 admin.site.register(Book, BookAdmin)
 admin.site.register(Category, CategoryAdmin)
 admin.site.register(Course, CourseAdmin)
+   
+
+
