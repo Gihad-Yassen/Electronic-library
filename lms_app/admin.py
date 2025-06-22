@@ -85,7 +85,7 @@ class BookAdmin(admin.ModelAdmin):
     list_display_links = ['title', 'author'] 
     list_max_show_all = 100
     list_per_page = 2
-    list_select_related = ['category', 'course',]
+    list_select_related = ['category', 'course']
     search_fields = ['title', 'author', 'course__name']
     autocomplete_fields = ['course', 'category']
     list_filter = ['category', 'status', 'course', 'active']
@@ -93,7 +93,6 @@ class BookAdmin(admin.ModelAdmin):
     actions = ['activate_books', 'deactivate_books']
     actions_on_top = True     
     actions_on_bottom = True 
-    filter_horizontal =()
     ordering = ['-active', 'category', '-id']   
     readonly_fields = ['category']
     save_as = True
