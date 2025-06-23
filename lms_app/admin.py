@@ -7,6 +7,15 @@ from .models import Book, Category, Course
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
 from taggit.models import Tag
+from django.core import serializers
+from django.http import HttpResponse
+
+
+def export_as_json(modeladmin, request, queryset):
+    response = HttpResponse(content_type="application/json")
+    response['Content-Disposition'] = 'attachment; filename=export.json'
+    serializers.serialize("json", queryset, stream=response)
+    return response
 
 
 class BookForm(forms.ModelForm):
@@ -15,7 +24,7 @@ class BookForm(forms.ModelForm):
         (False, "غير مفعل"),
     )
 
-    active = forms.ChoiceField(choices=ACTIVE_CHOICES, label='ACTIVE')
+    
     
     active = forms.ChoiceField(
         choices=ACTIVE_CHOICES,
@@ -72,13 +81,16 @@ class CourseAdmin(admin.ModelAdmin):
 
 # لوحة تحكم الكتب
 class BookAdmin(admin.ModelAdmin):
+    date_hierarchy = 'published_date' 
     
     formfield_overrides = {
         models.CharField: {
             'widget': TextInput(attrs={'size': 60})     
         },
+        
       
     }
+    filter_horizontal = []
     form = BookForm
     list_display = ['title', 'author', 'category', 'status', 'course', 'is_active_display']
     search_help_text = "ابحث بالعنوان أو اسم المؤلف أو اسم الدورة"
@@ -99,7 +111,7 @@ class BookAdmin(admin.ModelAdmin):
     save_as_continue = True
     save_on_top = True 
     show_full_result_count = True
-    
+    actions = [export_as_json]
     
 
     @admin.display(ordering='active', description='الحالة', boolean=True)
