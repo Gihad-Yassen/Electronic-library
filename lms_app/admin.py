@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django import forms
 from django.forms import TextInput
 from django.db import models
@@ -15,6 +15,7 @@ def export_as_json(modeladmin, request, queryset):
     response = HttpResponse(content_type="application/json")
     response['Content-Disposition'] = 'attachment; filename=export.json'
     serializers.serialize("json", queryset, stream=response)
+    messages.success(request, "تم تصدير البيانات بنجاح.")
     return response
 
 # === BookForm ===
@@ -23,13 +24,11 @@ class BookForm(forms.ModelForm):
         (True, "مفعل"),
         (False, "غير مفعل"),
     )
-
     active = forms.ChoiceField(
         choices=ACTIVE_CHOICES,
         widget=forms.RadioSelect,
         label='الحالة'
     )
-
     class Meta:
         model = Book
         fields = '__all__'
@@ -43,19 +42,15 @@ class BookForm(forms.ModelForm):
         cleaned_data = super().clean()
         published_date = cleaned_data.get('published_date')
         retal_period = cleaned_data.get('retal_period')
-
         if retal_period and not published_date:
             raise ValidationError("يجب تحديد تاريخ النشر إذا تم تحديد فترة التأجير.")
-
         if retal_period is not None and retal_period <= 0:
             self.add_error('retal_period', "فترة التأجير يجب أن تكون أكبر من صفر.")
-
         return cleaned_data
 
 # === CourseForm ===
 class CourseForm(forms.ModelForm):
     description = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}))
-
     class Meta:
         model = Course
         fields = '__all__'
@@ -117,6 +112,10 @@ class CourseAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        messages.success(request, f"تم حفظ الدورة: {obj.name}")
+
 # === BookAdmin ===
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
@@ -132,23 +131,15 @@ class BookAdmin(admin.ModelAdmin):
         'is_active_display', 'status_color'
     ]
     list_display_links = ['title', 'author']
-
     list_filter = ['category', 'status', 'course', 'active', PriceRangeFilter]
-
     search_fields = ['title', 'author', 'course__name']
-
     autocomplete_fields = ['course', 'category']
-
     actions = ['activate_books', 'deactivate_books', export_as_json]
-
     ordering = ['-active', 'category', '-id']
-
     readonly_fields = ['category']
-
     save_as = True
     save_as_continue = True
     save_on_top = True
-
     list_max_show_all = 100
     list_per_page = 2
     search_help_text = "ابحث بالعنوان أو اسم المؤلف أو اسم الدورة"
@@ -156,7 +147,6 @@ class BookAdmin(admin.ModelAdmin):
     actions_on_top = True
     actions_on_bottom = True
     show_full_result_count = True
-
     list_select_related = ['category', 'course']
 
     def get_queryset(self, request):
@@ -172,12 +162,19 @@ class BookAdmin(admin.ModelAdmin):
     @admin.action(description="تفعيل الكتب")
     def activate_books(self, request, queryset):
         updated = queryset.update(active=True)
-        self.message_user(request, f"تم تفعيل {updated} كتاب بنجاح.")
+        messages.success(request, f"تم تفعيل {updated} كتاب بنجاح.")
 
     @admin.action(description="إلغاء تفعيل الكتب")
     def deactivate_books(self, request, queryset):
         updated = queryset.update(active=False)
-        self.message_user(request, f"{updated} كتاب تم إلغاء تفعيله.")
+        messages.warning(request, f"{updated} كتاب تم إلغاء تفعيله.")
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if change:
+            messages.info(request, f"تم تحديث الكتاب: {obj.title}")
+        else:
+            messages.success(request, f"تمت إضافة الكتاب: {obj.title}")
 
     def has_add_permission(self, request, obj=None):
         return request.user.is_superuser or request.user.groups.filter(name='Book Editors').exists()

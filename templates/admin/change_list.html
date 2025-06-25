@@ -2,7 +2,7 @@
 
 {% block content %}
 <div style="margin-bottom:10px;">
-  <a href="/admin/" class="button">🔙 الرجوع للوحة التحكم</a>
+  <a href="{% url 'admin:index' %}" class="button">🔙 الرجوع للوحة التحكم</a>
 </div>
 {{ block.super }}
 {% endblock %}
