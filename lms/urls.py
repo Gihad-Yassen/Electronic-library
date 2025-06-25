@@ -17,13 +17,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from django.conf.urls.static import static 
-
+import debug_toolbar
 from lms import settings
 
 urlpatterns = [
     path('admin/', admin.site.urls),path('', include('lms_app.urls')),
     path('tinymce/', include('tinymce.urls')),
     path("chaining/", include("smart_selects.urls")),
+    path('__debug__/', include(debug_toolbar.urls)),
  
  
 ] 

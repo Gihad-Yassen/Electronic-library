@@ -1,6 +1,6 @@
 from django.contrib import admin
-from django import forms 
-from django.forms import TextInput    
+from django import forms
+from django.forms import TextInput
 from django.db import models
 from tinymce.widgets import TinyMCE
 from .models import Book, Category, Course
@@ -10,25 +10,23 @@ from django.core import serializers
 from django.http import HttpResponse
 from django.core.exceptions import ValidationError
 
-
-
+# === Action لتصدير JSON ===
 def export_as_json(modeladmin, request, queryset):
     response = HttpResponse(content_type="application/json")
     response['Content-Disposition'] = 'attachment; filename=export.json'
     serializers.serialize("json", queryset, stream=response)
     return response
 
-
-
+# === BookForm ===
 class BookForm(forms.ModelForm):
     ACTIVE_CHOICES = (
         (True, "مفعل"),
         (False, "غير مفعل"),
     )
-    
+
     active = forms.ChoiceField(
         choices=ACTIVE_CHOICES,
-        widget=forms.RadioSelect, 
+        widget=forms.RadioSelect,
         label='الحالة'
     )
 
@@ -54,8 +52,7 @@ class BookForm(forms.ModelForm):
 
         return cleaned_data
 
-
-
+# === CourseForm ===
 class CourseForm(forms.ModelForm):
     description = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}))
 
@@ -63,8 +60,7 @@ class CourseForm(forms.ModelForm):
         model = Course
         fields = '__all__'
 
-
-
+# === BookInline ===
 class BookInline(admin.StackedInline):
     model = Book
     extra = 2
@@ -73,12 +69,11 @@ class BookInline(admin.StackedInline):
     fields = ['title', 'author', 'status', 'price']
     show_change_link = True
 
-
-# === Custom Price Filter ===
+# === Price Filter ===
 class PriceRangeFilter(admin.SimpleListFilter):
     title = _('السعر')
     parameter_name = 'price_range'
-    
+
     def lookups(self, request, model_admin):
         return [
             ('above_150', _('أعلى من 150')),
@@ -92,8 +87,7 @@ class PriceRangeFilter(admin.SimpleListFilter):
             return queryset.filter(price__isnull=False, price__lt=150)
         return queryset
 
-
-
+# === CourseAdmin ===
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     form = CourseForm
@@ -114,41 +108,62 @@ class CourseAdmin(admin.ModelAdmin):
     def renderd_description(self, obj):
         return format_html(obj.description)
 
-    def get_formsets_with_inlines(self, request, obj=None):
-        for inline in self.get_inline_instances(request, obj):
-            if not isinstance(inline, BookInline) or obj is not None:
-                yield inline.get_formset(request, obj), inline
+    def has_add_permission(self, request, obj=None):
+        return request.user.is_superuser
 
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
 
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
 
+# === BookAdmin ===
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     form = BookForm
     date_hierarchy = 'published_date'
+
     formfield_overrides = {
-        models.CharField: {
-            'widget': TextInput(attrs={'size': 60})     
-        },
+        models.CharField: {'widget': TextInput(attrs={'size': 60})}
     }
-    list_display = ['title', 'author', 'category', 'status', 'course', 'is_active_display', 'status_color']
+
+    list_display = [
+        'title', 'author', 'category', 'status', 'course',
+        'is_active_display', 'status_color'
+    ]
     list_display_links = ['title', 'author']
+
     list_filter = ['category', 'status', 'course', 'active', PriceRangeFilter]
+
     search_fields = ['title', 'author', 'course__name']
+
     autocomplete_fields = ['course', 'category']
+
     actions = ['activate_books', 'deactivate_books', export_as_json]
+
     ordering = ['-active', 'category', '-id']
+
     readonly_fields = ['category']
+
     save_as = True
     save_as_continue = True
     save_on_top = True
+
     list_max_show_all = 100
     list_per_page = 2
     search_help_text = "ابحث بالعنوان أو اسم المؤلف أو اسم الدورة"
-    list_select_related = ['category', 'course']
     empty_value_display = ' لا توجد قيمة '
-    actions_on_top = True     
+    actions_on_top = True
     actions_on_bottom = True
     show_full_result_count = True
+
+    list_select_related = ['category', 'course']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).prefetch_related('tags')
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(owner=request.user) if hasattr(Book, 'owner') else qs
 
     @admin.display(ordering='active', description='الحالة', boolean=True)
     def is_active_display(self, obj):
@@ -163,6 +178,19 @@ class BookAdmin(admin.ModelAdmin):
     def deactivate_books(self, request, queryset):
         updated = queryset.update(active=False)
         self.message_user(request, f"{updated} كتاب تم إلغاء تفعيله.")
+
+    def has_add_permission(self, request, obj=None):
+        return request.user.is_superuser or request.user.groups.filter(name='Book Editors').exists()
+
+    def has_change_permission(self, request, obj=None):
+        if obj is None:
+            return True
+        if hasattr(obj, 'owner'):
+            return obj.owner == request.user or request.user.is_superuser
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
 
     fieldsets = (
         ('معلومات الكتاب', {
@@ -181,8 +209,7 @@ class BookAdmin(admin.ModelAdmin):
         }),
     )
 
-
-
+# === CategoryAdmin ===
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     search_fields = ['name']
