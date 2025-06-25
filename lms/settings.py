@@ -76,6 +76,7 @@ TEMPLATES = [
         },
     },
 ]
+STATIC_URL = '/static/'
 
 WSGI_APPLICATION = 'lms.wsgi.application'
 

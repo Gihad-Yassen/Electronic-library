@@ -40,7 +40,7 @@ class Book(models.Model):
     active = models.BooleanField(default=False)
     tags = TaggableManager()
     published_date = models.DateField(null=True, blank=True)
-    
+    status_color = models.CharField(max_length=7, blank=True, help_text="اختر لون الحالة")
     
     def __str__(self):
         return self.title

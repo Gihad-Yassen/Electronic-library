@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+
+{% block title %}لوحة الإدارة الخاصة بي{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+  <a href="{% url 'admin:index' %}">
+    <img src="/static/img/my_logo.JPG" alt="" style="height: 30px; vertical-align: middle;">
+    لوحة الإدارة الخاصة بي
+  </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}
+<a href="/" class="button">🔙 العودة إلى الموقع</a>
+{% endblock %}

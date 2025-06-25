@@ -1,14 +1,15 @@
 from django.contrib import admin
 from django import forms 
-from django.forms import TextInput, Textarea    
+from django.forms import TextInput    
 from django.db import models
 from tinymce.widgets import TinyMCE
 from .models import Book, Category, Course
 from django.utils.translation import gettext_lazy as _
 from django.utils.html import format_html
-from taggit.models import Tag
 from django.core import serializers
 from django.http import HttpResponse
+from django.core.exceptions import ValidationError
+
 
 
 def export_as_json(modeladmin, request, queryset):
@@ -18,13 +19,12 @@ def export_as_json(modeladmin, request, queryset):
     return response
 
 
+
 class BookForm(forms.ModelForm):
     ACTIVE_CHOICES = (
         (True, "مفعل"),
         (False, "غير مفعل"),
     )
-
-    
     
     active = forms.ChoiceField(
         choices=ACTIVE_CHOICES,
@@ -34,8 +34,28 @@ class BookForm(forms.ModelForm):
 
     class Meta:
         model = Book
-        fields = ['title', 'category', 'course', 'active']
-        
+        fields = '__all__'
+        widgets = {
+            'title': TextInput(attrs={'size': 60}),
+            'author': TextInput(attrs={'size': 60}),
+            'status_color': forms.TextInput(attrs={'type': 'color'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        published_date = cleaned_data.get('published_date')
+        retal_period = cleaned_data.get('retal_period')
+
+        if retal_period and not published_date:
+            raise ValidationError("يجب تحديد تاريخ النشر إذا تم تحديد فترة التأجير.")
+
+        if retal_period is not None and retal_period <= 0:
+            self.add_error('retal_period', "فترة التأجير يجب أن تكون أكبر من صفر.")
+
+        return cleaned_data
+
+
+
 class CourseForm(forms.ModelForm):
     description = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}))
 
@@ -44,92 +64,105 @@ class CourseForm(forms.ModelForm):
         fields = '__all__'
 
 
-# عرض الكتب داخل الكورس بشكل مضغوط
-class BookInline(admin.TabularInline): 
+
+class BookInline(admin.StackedInline):
     model = Book
-    extra = 1  
-    fields = ['title', 'author', 'status', 'price']  
-    show_change_link = True 
+    extra = 2
+    can_delete = True
+    readonly_fields = ['price']
+    fields = ['title', 'author', 'status', 'price']
+    show_change_link = True
 
 
-# لوحة تحكم الكورسات
+# === Custom Price Filter ===
+class PriceRangeFilter(admin.SimpleListFilter):
+    title = _('السعر')
+    parameter_name = 'price_range'
+    
+    def lookups(self, request, model_admin):
+        return [
+            ('above_150', _('أعلى من 150')),
+            ('below_150', _('أقل من 150')),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'above_150':
+            return queryset.filter(price__isnull=False, price__gt=150)
+        if self.value() == 'below_150':
+            return queryset.filter(price__isnull=False, price__lt=150)
+        return queryset
+
+
+
+@admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     form = CourseForm
     inlines = [BookInline]
-    list_display = ['name','description', 'renderd_description']
+    list_display = ['name', 'description', 'renderd_description']
     search_fields = ['name', 'description']
     list_editable = ['description']
 
     def get_sortable_by(self, request):
-        # منع الترتيب على   'description'
         return {'name'}
 
     def get_inline_instances(self, request, obj=None):
         if not request.user.is_superuser:
-           return []  # لا تعرض الكتب إذا لم يكن المستخدم مشرفًا
+            return []
         return super().get_inline_instances(request, obj)
-    
-    @admin.display(description=_("description"))
-    def renderd_description(self,obj):
+
+    @admin.display(description=_("الوصف"))
+    def renderd_description(self, obj):
         return format_html(obj.description)
-        
+
     def get_formsets_with_inlines(self, request, obj=None):
         for inline in self.get_inline_instances(request, obj):
-            # لا تعرض BookInline في صفحة الإضافة
             if not isinstance(inline, BookInline) or obj is not None:
                 yield inline.get_formset(request, obj), inline
 
-# لوحة تحكم الكتب
+
+
+@admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-    date_hierarchy = 'published_date' 
-    
+    form = BookForm
+    date_hierarchy = 'published_date'
     formfield_overrides = {
         models.CharField: {
             'widget': TextInput(attrs={'size': 60})     
         },
-        
-      
     }
-    filter_horizontal = []
-    form = BookForm
-    list_display = ['title', 'author', 'category', 'status', 'course', 'is_active_display']
-    search_help_text = "ابحث بالعنوان أو اسم المؤلف أو اسم الدورة"
-    list_display_links = ['title', 'author'] 
-    list_max_show_all = 100
-    list_per_page = 2
-    list_select_related = ['category', 'course']
+    list_display = ['title', 'author', 'category', 'status', 'course', 'is_active_display', 'status_color']
+    list_display_links = ['title', 'author']
+    list_filter = ['category', 'status', 'course', 'active', PriceRangeFilter]
     search_fields = ['title', 'author', 'course__name']
     autocomplete_fields = ['course', 'category']
-    list_filter = ['category', 'status', 'course', 'active']
-    empty_value_display = ' لا توجد قيمة '
-    actions = ['activate_books', 'deactivate_books']
-    actions_on_top = True     
-    actions_on_bottom = True 
-    ordering = ['-active', 'category', '-id']   
+    actions = ['activate_books', 'deactivate_books', export_as_json]
+    ordering = ['-active', 'category', '-id']
     readonly_fields = ['category']
     save_as = True
     save_as_continue = True
-    save_on_top = True 
+    save_on_top = True
+    list_max_show_all = 100
+    list_per_page = 2
+    search_help_text = "ابحث بالعنوان أو اسم المؤلف أو اسم الدورة"
+    list_select_related = ['category', 'course']
+    empty_value_display = ' لا توجد قيمة '
+    actions_on_top = True     
+    actions_on_bottom = True
     show_full_result_count = True
-    actions = [export_as_json]
-    
 
     @admin.display(ordering='active', description='الحالة', boolean=True)
     def is_active_display(self, obj):
         return obj.active
 
-    def get_sortable_by(self, request):
-        return {*self.get_list_display(request)} - {'status'}
-
+    @admin.action(description="تفعيل الكتب")
     def activate_books(self, request, queryset):
         updated = queryset.update(active=True)
         self.message_user(request, f"تم تفعيل {updated} كتاب بنجاح.")
 
-    @admin.action(description="  deactivate books")
+    @admin.action(description="إلغاء تفعيل الكتب")
     def deactivate_books(self, request, queryset):
         updated = queryset.update(active=False)
         self.message_user(request, f"{updated} كتاب تم إلغاء تفعيله.")
-
 
     fieldsets = (
         ('معلومات الكتاب', {
@@ -138,7 +171,7 @@ class BookAdmin(admin.ModelAdmin):
             'classes': ('wide',),
         }),
         ('معلومات النشر والدورة', {
-            'fields': ('status', 'course', 'price'),
+            'fields': ('status', 'status_color', 'course', 'price', 'retal_period', 'published_date'),
             'description': 'تفاصيل حول الدورة المرتبطة وسعر الكتاب.',
             'classes': ('collapse',),
         }),
@@ -148,18 +181,8 @@ class BookAdmin(admin.ModelAdmin):
         }),
     )
 
-           
 
 
-# لوحة تحكم الفئات
+@admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     search_fields = ['name']
-
-
-# تسجيل النماذج في لوحة الإدارة
-admin.site.register(Book, BookAdmin)
-admin.site.register(Category, CategoryAdmin)
-admin.site.register(Course, CourseAdmin)
-   
-
-
