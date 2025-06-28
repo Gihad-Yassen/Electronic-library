@@ -79,6 +79,8 @@ TEMPLATES = [
         },
     },
 ]
+CELERY_BROKER_URL = 'redis://localhost:6379/0' 
+
 STATIC_URL = '/static/'
 
 WSGI_APPLICATION = 'lms.wsgi.application'

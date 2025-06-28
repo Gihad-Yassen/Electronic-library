@@ -10,7 +10,10 @@ from django.core import serializers
 from django.http import HttpResponse
 from django.core.exceptions import ValidationError
 
-# === Action لتصدير JSON ===
+# 📌 استيراد مهمة Celery
+from .tasks import generate_books_pdf_task
+
+# ✅ إجراء تصدير JSON
 def export_as_json(modeladmin, request, queryset):
     response = HttpResponse(content_type="application/json")
     response['Content-Disposition'] = 'attachment; filename=export.json'
@@ -18,7 +21,14 @@ def export_as_json(modeladmin, request, queryset):
     messages.success(request, "تم تصدير البيانات بنجاح.")
     return response
 
-# === BookForm ===
+# ✅ إجراء توليد PDF في الخلفية
+@admin.action(description="توليد ملفات PDF للكتب (خلفية)")
+def generate_pdf_books_background(modeladmin, request, queryset):
+    book_ids = list(queryset.values_list('id', flat=True))
+    generate_books_pdf_task.delay(book_ids)
+    modeladmin.message_user(request, "🚀 تم إرسال المهمة إلى الخلفية بنجاح عبر Celery.", messages.SUCCESS)
+
+# ====== النماذج Forms ======
 class BookForm(forms.ModelForm):
     ACTIVE_CHOICES = (
         (True, "مفعل"),
@@ -48,14 +58,14 @@ class BookForm(forms.ModelForm):
             self.add_error('retal_period', "فترة التأجير يجب أن تكون أكبر من صفر.")
         return cleaned_data
 
-# === CourseForm ===
+
 class CourseForm(forms.ModelForm):
     description = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}))
     class Meta:
         model = Course
         fields = '__all__'
 
-# === BookInline ===
+
 class BookInline(admin.StackedInline):
     model = Book
     extra = 2
@@ -64,7 +74,7 @@ class BookInline(admin.StackedInline):
     fields = ['title', 'author', 'status', 'price']
     show_change_link = True
 
-# === Price Filter ===
+
 class PriceRangeFilter(admin.SimpleListFilter):
     title = _('السعر')
     parameter_name = 'price_range'
@@ -82,7 +92,7 @@ class PriceRangeFilter(admin.SimpleListFilter):
             return queryset.filter(price__isnull=False, price__lt=150)
         return queryset
 
-# === CourseAdmin ===
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     form = CourseForm
@@ -116,7 +126,7 @@ class CourseAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         messages.success(request, f"تم حفظ الدورة: {obj.name}")
 
-# === BookAdmin ===
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     form = BookForm
@@ -134,7 +144,7 @@ class BookAdmin(admin.ModelAdmin):
     list_filter = ['category', 'status', 'course', 'active', PriceRangeFilter]
     search_fields = ['title', 'author', 'course__name']
     autocomplete_fields = ['course', 'category']
-    actions = ['activate_books', 'deactivate_books', export_as_json]
+    actions = ['activate_books', 'deactivate_books', export_as_json, generate_pdf_books_background]
     ordering = ['-active', 'category', '-id']
     readonly_fields = ['category']
     save_as = True
@@ -206,7 +216,7 @@ class BookAdmin(admin.ModelAdmin):
         }),
     )
 
-# === CategoryAdmin ===
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     search_fields = ['name']
