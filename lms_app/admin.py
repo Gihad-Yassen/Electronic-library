@@ -9,35 +9,33 @@ from django.utils.html import format_html
 from django.core import serializers
 from django.http import HttpResponse
 from django.core.exceptions import ValidationError
-
-# 📌 استيراد مهمة Celery
 from .tasks import generate_books_pdf_task
 
-# ✅ إجراء تصدير JSON
+
 def export_as_json(modeladmin, request, queryset):
     response = HttpResponse(content_type="application/json")
     response['Content-Disposition'] = 'attachment; filename=export.json'
     serializers.serialize("json", queryset, stream=response)
-    messages.success(request, "تم تصدير البيانات بنجاح.")
+    messages.success(request, _("تم تصدير البيانات بنجاح."))
     return response
 
-# ✅ إجراء توليد PDF في الخلفية
-@admin.action(description="توليد ملفات PDF للكتب (خلفية)")
+
+@admin.action(description=_("توليد ملفات PDF"))
 def generate_pdf_books_background(modeladmin, request, queryset):
     book_ids = list(queryset.values_list('id', flat=True))
     generate_books_pdf_task.delay(book_ids)
-    modeladmin.message_user(request, "🚀 تم إرسال المهمة إلى الخلفية بنجاح عبر Celery.", messages.SUCCESS)
+    modeladmin.message_user(request, _("تم إرسال المهمة إلى الخلفية بنجاح عبر Celery."), messages.SUCCESS)
 
-# ====== النماذج Forms ======
+
 class BookForm(forms.ModelForm):
     ACTIVE_CHOICES = (
-        (True, "مفعل"),
-        (False, "غير مفعل"),
+        (True, _("مفعل")),
+        (False, _("غير مفعل")),
     )
     active = forms.ChoiceField(
         choices=ACTIVE_CHOICES,
         widget=forms.RadioSelect,
-        label='الحالة'
+        label=_('الحالة')
     )
     class Meta:
         model = Book
@@ -53,9 +51,9 @@ class BookForm(forms.ModelForm):
         published_date = cleaned_data.get('published_date')
         retal_period = cleaned_data.get('retal_period')
         if retal_period and not published_date:
-            raise ValidationError("يجب تحديد تاريخ النشر إذا تم تحديد فترة التأجير.")
+            raise ValidationError(_("يجب تحديد تاريخ النشر إذا تم تحديد فترة التأجير."))
         if retal_period is not None and retal_period <= 0:
-            self.add_error('retal_period', "فترة التأجير يجب أن تكون أكبر من صفر.")
+            self.add_error('retal_period', _("فترة التأجير يجب أن تكون أكبر من صفر."))
         return cleaned_data
 
 
@@ -124,7 +122,7 @@ class CourseAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        messages.success(request, f"تم حفظ الدورة: {obj.name}")
+        messages.success(request, _("تم حفظ الدورة: %(name)s") % {'name': obj.name})
 
 
 @admin.register(Book)
@@ -152,8 +150,8 @@ class BookAdmin(admin.ModelAdmin):
     save_on_top = True
     list_max_show_all = 100
     list_per_page = 2
-    search_help_text = "ابحث بالعنوان أو اسم المؤلف أو اسم الدورة"
-    empty_value_display = ' لا توجد قيمة '
+    search_help_text = _("ابحث بالعنوان أو اسم المؤلف أو اسم الدورة")
+    empty_value_display = _('لا توجد قيمة')
     actions_on_top = True
     actions_on_bottom = True
     show_full_result_count = True
@@ -165,26 +163,26 @@ class BookAdmin(admin.ModelAdmin):
             return qs
         return qs.filter(owner=request.user) if hasattr(Book, 'owner') else qs
 
-    @admin.display(ordering='active', description='الحالة', boolean=True)
+    @admin.display(ordering='active', description=_('الحالة'), boolean=True)
     def is_active_display(self, obj):
         return obj.active
 
-    @admin.action(description="تفعيل الكتب")
+    @admin.action(description=_("تفعيل الكتب"))
     def activate_books(self, request, queryset):
         updated = queryset.update(active=True)
-        messages.success(request, f"تم تفعيل {updated} كتاب بنجاح.")
+        messages.success(request, _("تم تفعيل %(count)d كتاب بنجاح.") % {'count': updated})
 
-    @admin.action(description="إلغاء تفعيل الكتب")
+    @admin.action(description=_("إلغاء تفعيل الكتب"))
     def deactivate_books(self, request, queryset):
         updated = queryset.update(active=False)
-        messages.warning(request, f"{updated} كتاب تم إلغاء تفعيله.")
+        messages.warning(request, _("%(count)d كتاب تم إلغاء تفعيله.") % {'count': updated})
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         if change:
-            messages.info(request, f"تم تحديث الكتاب: {obj.title}")
+            messages.info(request, _("تم تحديث الكتاب: %(title)s") % {'title': obj.title})
         else:
-            messages.success(request, f"تمت إضافة الكتاب: {obj.title}")
+            messages.success(request, _("تمت إضافة الكتاب: %(title)s") % {'title': obj.title})
 
     def has_add_permission(self, request, obj=None):
         return request.user.is_superuser or request.user.groups.filter(name='Book Editors').exists()
@@ -200,19 +198,19 @@ class BookAdmin(admin.ModelAdmin):
         return request.user.is_superuser
 
     fieldsets = (
-        ('معلومات الكتاب', {
+        (_('معلومات الكتاب'), {
             'fields': ('title', 'author', 'category', 'tags'),
-            'description': 'معلومات أساسية عن الكتاب.',
+            'description': _('معلومات أساسية عن الكتاب.'),
             'classes': ('wide',),
         }),
-        ('معلومات النشر والدورة', {
+        (_('معلومات النشر والدورة'), {
             'fields': ('status', 'status_color', 'course', 'price', 'retal_period', 'published_date'),
-            'description': 'تفاصيل حول الدورة المرتبطة وسعر الكتاب.',
+            'description': _('تفاصيل حول الدورة المرتبطة وسعر الكتاب.'),
             'classes': ('collapse',),
         }),
-        ('الحالة', {
+        (_('الحالة'), {
             'fields': ('active',),
-            'description': 'هل الكتاب مفعل أم لا؟',
+            'description': _('هل الكتاب مفعل أم لا؟'),
         }),
     )
 

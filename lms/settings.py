@@ -51,11 +51,13 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 ]
 INTERNAL_IPS = [
     '127.0.0.1',
@@ -79,6 +81,24 @@ TEMPLATES = [
         },
     },
 ]
+# اللغة الافتراضية
+LANGUAGE_CODE = 'ar'
+
+# دعم اللغات
+LANGUAGES = [
+    ('ar', 'العربية'),
+    ('en', 'English'),
+]
+
+# مسار ملفات الترجمة
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
+
+USE_I18N = True
+USE_L10N = True
+USE_TZ = True
+
 CELERY_BROKER_URL = 'redis://localhost:6379/0' 
 
 STATIC_URL = '/static/'

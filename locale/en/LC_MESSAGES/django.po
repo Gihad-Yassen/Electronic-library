@@ -1,0 +1,127 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-06-28 17:59+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+#: .\lms_app\admin.py:19
+msgid "تم تصدير البيانات بنجاح."
+msgstr ""
+
+#: .\lms_app\admin.py:23
+msgid "توليد ملفات PDF"
+msgstr "Generate PDF files"
+
+#: .\lms_app\admin.py:27
+msgid "تم إرسال المهمة إلى الخلفية بنجاح عبر Celery."
+msgstr "The task was successfully submitted to the background via Celery."
+
+#: .\lms_app\admin.py:32
+msgid "مفعل"
+msgstr "Activated"
+
+#: .\lms_app\admin.py:33
+msgid "غير مفعل"
+msgstr "Not activated"
+
+#: .\lms_app\admin.py:38 .\lms_app\admin.py:166 .\lms_app\admin.py:211
+msgid "الحالة"
+msgstr "the condition"
+
+#: .\lms_app\admin.py:54
+msgid "يجب تحديد تاريخ النشر إذا تم تحديد فترة التأجير."
+msgstr "A publication date must be specified if a rental period is specified."
+
+#: .\lms_app\admin.py:56
+msgid "فترة التأجير يجب أن تكون أكبر من صفر."
+msgstr "The lease period must be greater than zero."
+
+#: .\lms_app\admin.py:77
+msgid "السعر"
+msgstr "Price"
+
+#: .\lms_app\admin.py:82
+msgid "أعلى من 150"
+msgstr "higher than 150"
+
+#: .\lms_app\admin.py:83
+msgid "أقل من 150"
+msgstr "below 150"
+
+#: .\lms_app\admin.py:110
+msgid "الوصف"
+msgstr "Description"
+
+#: .\lms_app\admin.py:125
+#, python-format
+msgid "تم حفظ الدورة: %(name)s"
+msgstr "Course saved:"
+
+#: .\lms_app\admin.py:153
+msgid "ابحث بالعنوان أو اسم المؤلف أو اسم الدورة"
+msgstr "Search by title, author name, or course name"
+
+#: .\lms_app\admin.py:154
+msgid "لا توجد قيمة"
+msgstr "There is no value"
+
+#: .\lms_app\admin.py:170
+msgid "تفعيل الكتب"
+msgstr "Activate books"
+
+#: .\lms_app\admin.py:173
+#, python-format
+msgid "تم تفعيل %(count)d كتاب بنجاح."
+msgstr "%(count)d books have been activated successfully."
+
+#: .\lms_app\admin.py:175
+msgid "إلغاء تفعيل الكتب"
+msgstr "Deactivate books"
+
+#: .\lms_app\admin.py:178
+#, python-format
+msgid "%(count)d كتاب تم إلغاء تفعيله."
+msgstr "%(count)d book has been deactivated"
+
+#: .\lms_app\admin.py:183
+#, python-format
+msgid "تم تحديث الكتاب: %(title)s"
+msgstr "The book has been updated:"
+
+#: .\lms_app\admin.py:185
+#, python-format
+msgid "تمت إضافة الكتاب: %(title)s"
+msgstr "Book added"
+
+#: .\lms_app\admin.py:201
+msgid "معلومات الكتاب"
+msgstr "Book information"
+
+#: .\lms_app\admin.py:203
+msgid "معلومات أساسية عن الكتاب."
+msgstr "Basic information about the book"
+
+#: .\lms_app\admin.py:206
+msgid "معلومات النشر والدورة"
+msgstr "Publication and course information"
+
+#: .\lms_app\admin.py:208
+msgid "تفاصيل حول الدورة المرتبطة وسعر الكتاب."
+msgstr "Details about the associated course and book price"
+
+#: .\lms_app\admin.py:213
+msgid "هل الكتاب مفعل أم لا؟"
+msgstr "Is the book activated or not?"
