@@ -1,16 +1,23 @@
 {% extends "admin/base.html" %}
+{% load i18n %}
 
-{% block title %}لوحة الإدارة الخاصة بي{% endblock %}
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
 
 {% block branding %}
 <h1 id="site-name">
-  <a href="{% url 'admin:index' %}">
-    <img src="/static/img/my_logo.JPG" alt="" style="height: 30px; vertical-align: middle;">
-    لوحة الإدارة الخاصة بي
-  </a>
+  <a href="{% url 'admin:index' %}">{{ site_header|default:_('Django Administration') }}</a>
 </h1>
-{% endblock %}
-
-{% block nav-global %}
-<a href="/" class="button">🔙 العودة إلى الموقع</a>
+<form action="{% url 'set_language' %}" method="post" style="margin-top:10px;">
+  {% csrf_token %}
+  <select name="language" onchange="this.form.submit()">
+    {% get_current_language as LANGUAGE_CODE %}
+    {% get_available_languages as LANGUAGES %}
+    {% for lang in LANGUAGES %}
+      <option value="{{ lang.0 }}" {% if lang.0 == LANGUAGE_CODE %}selected{% endif %}>
+        {{ lang.1 }}
+      </option>
+    {% endfor %}
+  </select>
+  <input type="hidden" name="next" value="{{ request.path }}">
+</form>
 {% endblock %}
