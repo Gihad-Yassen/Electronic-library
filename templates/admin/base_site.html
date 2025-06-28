@@ -15,7 +15,7 @@
 {% block nav-global %}
 <a href="/" class="button">🔙 العودة إلى الموقع</a>
 
-<!-- زر تغيير اللغة -->
+
 <form action="{% url 'set_language' %}" method="post" style="display:inline-block; margin-left: 10px;">
   {% csrf_token %}
   <select name="language" onchange="this.form.submit()" style="padding: 3px;">

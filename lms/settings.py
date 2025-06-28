@@ -81,16 +81,16 @@ TEMPLATES = [
         },
     },
 ]
-# اللغة الافتراضية
+
 LANGUAGE_CODE = 'ar'
 
-# دعم اللغات
+ 
 LANGUAGES = [
     ('ar', 'العربية'),
     ('en', 'English'),
 ]
 
-# مسار ملفات الترجمة
+
 LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
