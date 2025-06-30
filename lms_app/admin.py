@@ -10,6 +10,11 @@ from django.core import serializers
 from django.http import HttpResponse
 from django.core.exceptions import ValidationError
 from .tasks import generate_books_pdf_task
+from django.urls import path
+from django.template.response import TemplateResponse
+from django.db.models import Avg, Count
+
+
 
 
 def export_as_json(modeladmin, request, queryset):
@@ -156,6 +161,27 @@ class BookAdmin(admin.ModelAdmin):
     actions_on_bottom = True
     show_full_result_count = True
     list_select_related = ['category', 'course']
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('report/', self.admin_site.admin_view(self.report_view), name='book-report'),
+        ]
+        return custom_urls + urls
+
+    def report_view(self, request):
+        context = dict(
+            self.admin_site.each_context(request),
+            title=_("تقرير الكتب"),
+            total_books=Book.objects.count(),
+            avg_price=Book.objects.aggregate(Avg('price'))['price__avg'],
+            active_count=Book.objects.filter(active=True).count(),
+        )
+        return TemplateResponse(request, "admin/book_report.html", context)
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['report_url'] = 'report/'
+        return super().changelist_view(request, extra_context=extra_context)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request).prefetch_related('tags')

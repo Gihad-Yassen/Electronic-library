@@ -3,6 +3,7 @@
 {% block content %}
 <div style="margin-bottom:10px;">
   <a href="{% url 'admin:index' %}" class="button">🔙 الرجوع للوحة التحكم</a>
+  <a href="{{ report_url }}" class="button">عرض تقرير الكتب</a>
 </div>
 {{ block.super }}
 {% endblock %}
