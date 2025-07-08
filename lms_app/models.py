@@ -3,7 +3,7 @@ from taggit.managers import TaggableManager
 from django.utils.translation import gettext_lazy as _
 from django_lifecycle import LifecycleModel, hook, AFTER_CREATE, AFTER_UPDATE, BEFORE_SAVE
 from django.contrib.auth import get_user_model
-
+from .fields import LowercaseCharField
 
 class Category(models.Model):
     name = models.CharField(max_length=50)
@@ -27,7 +27,7 @@ class Book(LifecycleModel):
         ('rental', 'rental'),
         ('sold', 'sold'),
     ]
-
+    title = LowercaseCharField(max_length=255)
     course = models.ForeignKey(Course, on_delete=models.PROTECT, null=True, blank=True)
     title = models.CharField(max_length=250)
     author = models.CharField(max_length=250, null=True, blank=True)

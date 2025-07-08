@@ -15,7 +15,7 @@ from django.template.response import TemplateResponse
 from django.db.models import Avg
 from guardian.shortcuts import assign_perm, get_perms, get_objects_for_user
 
-# --- Custom Actions ---
+
 def export_as_json(modeladmin, request, queryset):
     response = HttpResponse(content_type="application/json")
     response['Content-Disposition'] = 'attachment; filename=export.json'
@@ -29,7 +29,7 @@ def generate_pdf_books_background(modeladmin, request, queryset):
     generate_books_pdf_task.delay(book_ids)
     modeladmin.message_user(request, _("تم إرسال المهمة إلى الخلفية بنجاح عبر Celery."), messages.SUCCESS)
 
-# --- Book Form ---
+
 class BookForm(forms.ModelForm):
     ACTIVE_CHOICES = (
         (True, _("مفعل")),
@@ -56,14 +56,14 @@ class BookForm(forms.ModelForm):
             self.add_error('retal_period', _("فترة التأجير يجب أن تكون أكبر من صفر."))
         return cleaned_data
 
-# --- Course Form ---
+
 class CourseForm(forms.ModelForm):
     description = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}))
     class Meta:
         model = Course
         fields = '__all__'
 
-# --- Inline Books ---
+
 class BookInline(admin.StackedInline):
     model = Book
     extra = 2
@@ -72,7 +72,7 @@ class BookInline(admin.StackedInline):
     fields = ['title', 'author', 'status', 'price']
     show_change_link = True
 
-# --- Custom Filter ---
+
 class PriceRangeFilter(admin.SimpleListFilter):
     title = _('السعر')
     parameter_name = 'price_range'
@@ -90,7 +90,7 @@ class PriceRangeFilter(admin.SimpleListFilter):
             return queryset.filter(price__isnull=False, price__lt=150)
         return queryset
 
-# --- Course Admin ---
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     form = CourseForm
@@ -128,7 +128,7 @@ class CourseAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         messages.success(request, _("تم حفظ الدورة: %(name)s") % {'name': obj.name})
 
-# --- Book Admin ---
+
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     form = BookForm
@@ -237,7 +237,6 @@ class BookAdmin(admin.ModelAdmin):
         )
         return TemplateResponse(request, "admin/book_report.html", context)
 
-# --- Category Admin ---
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     search_fields = ['name']
