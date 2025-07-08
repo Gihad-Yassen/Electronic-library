@@ -43,8 +43,16 @@ INSTALLED_APPS = [
     'smart_selects',
     'taggit',
     'debug_toolbar',
+    
 ]
+INSTALLED_APPS +=['guardian']
 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',          # العادي
+    'guardian.backends.ObjectPermissionBackend',          # من django-guardian
+)
+
+ANONYMOUS_USER_ID = -1
 
 
 

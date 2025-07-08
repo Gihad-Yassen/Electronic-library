@@ -2,7 +2,7 @@ from django.db import models
 from taggit.managers import TaggableManager
 from django.utils.translation import gettext_lazy as _
 from django_lifecycle import LifecycleModel, hook, AFTER_CREATE, AFTER_UPDATE, BEFORE_SAVE
-
+from django.contrib.auth import get_user_model
 
 
 class Category(models.Model):
@@ -44,6 +44,7 @@ class Book(LifecycleModel):
     tags = TaggableManager()
     published_date = models.DateField(null=True, blank=True)
     status_color = models.CharField(max_length=7, blank=True, help_text="اختر لون الحالة")
+    owner = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='books', null=True, blank=True)
 
     def __str__(self):
         return self.title

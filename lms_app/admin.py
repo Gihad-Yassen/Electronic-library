@@ -12,11 +12,10 @@ from django.core.exceptions import ValidationError
 from .tasks import generate_books_pdf_task
 from django.urls import path
 from django.template.response import TemplateResponse
-from django.db.models import Avg, Count
+from django.db.models import Avg
+from guardian.shortcuts import assign_perm, get_perms, get_objects_for_user
 
-
-
-
+# --- Custom Actions ---
 def export_as_json(modeladmin, request, queryset):
     response = HttpResponse(content_type="application/json")
     response['Content-Disposition'] = 'attachment; filename=export.json'
@@ -24,24 +23,20 @@ def export_as_json(modeladmin, request, queryset):
     messages.success(request, _("تم تصدير البيانات بنجاح."))
     return response
 
-
 @admin.action(description=_("توليد ملفات PDF"))
 def generate_pdf_books_background(modeladmin, request, queryset):
     book_ids = list(queryset.values_list('id', flat=True))
     generate_books_pdf_task.delay(book_ids)
     modeladmin.message_user(request, _("تم إرسال المهمة إلى الخلفية بنجاح عبر Celery."), messages.SUCCESS)
 
-
+# --- Book Form ---
 class BookForm(forms.ModelForm):
     ACTIVE_CHOICES = (
         (True, _("مفعل")),
         (False, _("غير مفعل")),
     )
-    active = forms.ChoiceField(
-        choices=ACTIVE_CHOICES,
-        widget=forms.RadioSelect,
-        label=_('الحالة')
-    )
+    active = forms.ChoiceField(choices=ACTIVE_CHOICES, widget=forms.RadioSelect, label=_('الحالة'))
+
     class Meta:
         model = Book
         fields = '__all__'
@@ -61,14 +56,14 @@ class BookForm(forms.ModelForm):
             self.add_error('retal_period', _("فترة التأجير يجب أن تكون أكبر من صفر."))
         return cleaned_data
 
-
+# --- Course Form ---
 class CourseForm(forms.ModelForm):
     description = forms.CharField(widget=TinyMCE(attrs={'cols': 80, 'rows': 30}))
     class Meta:
         model = Course
         fields = '__all__'
 
-
+# --- Inline Books ---
 class BookInline(admin.StackedInline):
     model = Book
     extra = 2
@@ -77,7 +72,7 @@ class BookInline(admin.StackedInline):
     fields = ['title', 'author', 'status', 'price']
     show_change_link = True
 
-
+# --- Custom Filter ---
 class PriceRangeFilter(admin.SimpleListFilter):
     title = _('السعر')
     parameter_name = 'price_range'
@@ -95,7 +90,7 @@ class PriceRangeFilter(admin.SimpleListFilter):
             return queryset.filter(price__isnull=False, price__lt=150)
         return queryset
 
-
+# --- Course Admin ---
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     form = CourseForm
@@ -120,7 +115,11 @@ class CourseAdmin(admin.ModelAdmin):
         return request.user.is_superuser
 
     def has_change_permission(self, request, obj=None):
-        return request.user.is_superuser
+        if request.user.is_superuser:
+            return True
+        if obj is None:
+            return True
+        return 'change_book' in get_perms(request.user, obj)
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
@@ -129,25 +128,17 @@ class CourseAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
         messages.success(request, _("تم حفظ الدورة: %(name)s") % {'name': obj.name})
 
-
+# --- Book Admin ---
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     form = BookForm
     date_hierarchy = 'published_date'
-
-    formfield_overrides = {
-        models.CharField: {'widget': TextInput(attrs={'size': 60})}
-    }
-
-    list_display = [
-        'title', 'author', 'category', 'status', 'course',
-        'is_active_display', 'status_color'
-    ]
+    list_display = ['title', 'author', 'category', 'status', 'course', 'is_active_display', 'status_color']
     list_display_links = ['title', 'author']
     list_filter = ['category', 'status', 'course', 'active', PriceRangeFilter]
     search_fields = ['title', 'author', 'course__name']
     autocomplete_fields = ['course', 'category']
-    actions = ['activate_books', 'deactivate_books', export_as_json, generate_pdf_books_background]
+    actions = [export_as_json, generate_pdf_books_background, 'activate_books', 'deactivate_books']
     ordering = ['-active', 'category', '-id']
     readonly_fields = ['category']
     save_as = True
@@ -161,67 +152,6 @@ class BookAdmin(admin.ModelAdmin):
     actions_on_bottom = True
     show_full_result_count = True
     list_select_related = ['category', 'course']
-    
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path('report/', self.admin_site.admin_view(self.report_view), name='book-report'),
-        ]
-        return custom_urls + urls
-
-    def report_view(self, request):
-        context = dict(
-            self.admin_site.each_context(request),
-            title=_("تقرير الكتب"),
-            total_books=Book.objects.count(),
-            avg_price=Book.objects.aggregate(Avg('price'))['price__avg'],
-            active_count=Book.objects.filter(active=True).count(),
-        )
-        return TemplateResponse(request, "admin/book_report.html", context)
-    def changelist_view(self, request, extra_context=None):
-        extra_context = extra_context or {}
-        extra_context['report_url'] = 'report/'
-        return super().changelist_view(request, extra_context=extra_context)
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request).prefetch_related('tags')
-        if request.user.is_superuser:
-            return qs
-        return qs.filter(owner=request.user) if hasattr(Book, 'owner') else qs
-
-    @admin.display(ordering='active', description=_('الحالة'), boolean=True)
-    def is_active_display(self, obj):
-        return obj.active
-
-    @admin.action(description=_("تفعيل الكتب"))
-    def activate_books(self, request, queryset):
-        updated = queryset.update(active=True)
-        messages.success(request, _("تم تفعيل %(count)d كتاب بنجاح.") % {'count': updated})
-
-    @admin.action(description=_("إلغاء تفعيل الكتب"))
-    def deactivate_books(self, request, queryset):
-        updated = queryset.update(active=False)
-        messages.warning(request, _("%(count)d كتاب تم إلغاء تفعيله.") % {'count': updated})
-
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        if change:
-            messages.info(request, _("تم تحديث الكتاب: %(title)s") % {'title': obj.title})
-        else:
-            messages.success(request, _("تمت إضافة الكتاب: %(title)s") % {'title': obj.title})
-
-    def has_add_permission(self, request, obj=None):
-        return request.user.is_superuser or request.user.groups.filter(name='Book Editors').exists()
-
-    def has_change_permission(self, request, obj=None):
-        if obj is None:
-            return True
-        if hasattr(obj, 'owner'):
-            return obj.owner == request.user or request.user.is_superuser
-        return request.user.is_superuser
-
-    def has_delete_permission(self, request, obj=None):
-        return request.user.is_superuser
 
     fieldsets = (
         (_('معلومات الكتاب'), {
@@ -240,7 +170,74 @@ class BookAdmin(admin.ModelAdmin):
         }),
     )
 
+    @admin.display(ordering='active', description=_('الحالة'), boolean=True)
+    def is_active_display(self, obj):
+        return obj.active
 
+    def save_model(self, request, obj, form, change):
+        if not change or not obj.owner_id:
+            obj.owner = request.user
+        super().save_model(request, obj, form, change)
+        if not change:
+            assign_perm('change_book', request.user, obj)
+            assign_perm('view_book', request.user, obj)
+        if change:
+            messages.info(request, _("تم تحديث الكتاب: %(title)s") % {'title': obj.title})
+        else:
+            messages.success(request, _("تمت إضافة الكتاب: %(title)s") % {'title': obj.title})
+
+    def has_add_permission(self, request, obj=None):
+        return request.user.is_superuser or request.user.groups.filter(name='Book Editors').exists()
+
+    def has_change_permission(self, request, obj=None):
+        if request.user.is_superuser:
+            return True
+        if obj is None:
+            return True
+        return 'change_book' in get_perms(request.user, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).prefetch_related('tags')
+        if request.user.is_superuser:
+            return qs
+        return get_objects_for_user(request.user, 'lms_app', klass=Book)  # استبدل 'yourapp'
+
+    @admin.action(description=_("تفعيل الكتب"))
+    def activate_books(self, request, queryset):
+        updated = queryset.update(active=True)
+        messages.success(request, _("تم تفعيل %(count)d كتاب بنجاح.") % {'count': updated})
+
+    @admin.action(description=_("إلغاء تفعيل الكتب"))
+    def deactivate_books(self, request, queryset):
+        updated = queryset.update(active=False)
+        messages.warning(request, _("%(count)d كتاب تم إلغاء تفعيله.") % {'count': updated})
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('report/', self.admin_site.admin_view(self.report_view), name='book-report'),
+        ]
+        return custom_urls + urls
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['report_url'] = 'report/'
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def report_view(self, request):
+        context = dict(
+            self.admin_site.each_context(request),
+            title=_("تقرير الكتب"),
+            total_books=Book.objects.count(),
+            avg_price=Book.objects.aggregate(Avg('price'))['price__avg'],
+            active_count=Book.objects.filter(active=True).count(),
+        )
+        return TemplateResponse(request, "admin/book_report.html", context)
+
+# --- Category Admin ---
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     search_fields = ['name']
